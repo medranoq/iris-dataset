@@ -9,35 +9,48 @@ export default function DatasetView() {
     const [metadata, setMetadata] = useState(null)
     const [loading, setLoading] = useState(true)
     const fieldMap = [{key: 'sepal_length', label: 'Sepal Length (cm)'}, {
-        key: 'sepal_width',
-        label: 'Sepal Width (cm)'
+        key: 'sepal_width', label: 'Sepal Width (cm)'
     }, {key: 'petal_length', label: 'Petal Length (cm)'}, {key: 'petal_width', label: 'Petal Width (cm)'},]
 
     useEffect(() => {
+        let isMounted = true; // Prevent state updates if the component unmounts
+
         async function fetchData() {
             try {
-                const response = await axios.get('http://localhost:8000/iris')
-                const irisRows = response.data.data
-                const meta = response.data.metadata
+                const response = await axios.get('http://localhost:8000/iris');
+                if (isMounted) {
+                    const irisRows = response.data.data;
+                    const meta = response.data.metadata;
 
-                const targetNames = ['setosa', 'versicolor', 'virginica']
-                const processed = irisRows.map((row, idx) => ({
-                    ...row, species: targetNames[Math.floor(idx / 50)]
-                }))
+                    const targetNames = meta.target_names;
 
-                setData(processed)
-                setMetadata(meta)
+                    const processed = irisRows.map((row, idx) => ({
+                        ...row,
+                        species: targetNames[Math.floor(idx / 50)],
+                    }));
+
+                    setData(processed);
+                    setMetadata(meta);
+                }
             } catch (err) {
-                console.error('Error al cargar los datos del dataset:', err)
-                setData([])
-                setMetadata(null)
+                console.error('Error al cargar los datos del dataset:', err);
+                if (isMounted) {
+                    setData([]);
+                    setMetadata(null);
+                }
             } finally {
-                setLoading(false)
+                if (isMounted) {
+                    setLoading(false);
+                }
             }
         }
 
-        fetchData()
-    }, [])
+        fetchData();
+
+        return () => {
+            isMounted = false; // Cleanup to avoid setting state on unmounted component
+        };
+    }, []);
 
     if (loading) return <p>Cargando datos...</p>
     if (!data.length) return <p>No hay datos disponibles.</p>
@@ -51,47 +64,42 @@ export default function DatasetView() {
         species: key, count: value
     }))
 
-    return (<div style={{padding: '2rem', fontFamily: 'sans-serif'}}>
-            <h1>Información del Dataset Iris</h1>
+    return (
+        <div style={{padding: '2rem', fontFamily: 'sans-serif'}}>
+            <h1 style={{textAlign: 'center'}}>Información del Dataset Iris</h1>
 
-            {/* GRID de dos columnas arriba */}
-            <div
-                style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: '2rem',
-                    marginBottom: '3rem',
-                    alignItems: 'flex-start'
-                }}
-            >
-                {/* Descripción */}
-                <section>
-                    <h2>Descripción</h2>
-                    {metadata && (<>
-            <pre style={{
-                whiteSpace: 'pre-wrap',
-                background: '#0000000',
-                padding: '1rem',
-                borderRadius: '8px',
-                maxHeight: '300px',
-                overflow: 'auto'
+            {/* Descripción en una sola columna */}
+            <section style={{marginBottom: '3rem', width: '100%'}}>
+                <h2  >Descripción</h2>
+                {metadata && (
+                    <>
+                <pre style={{
+                    whiteSpace: 'pre-wrap',
+                    background: '#00000',
+                    padding: '1rem',
+                    borderRadius: '8px',
+                    maxHeight: '500px',
+                    overflow: 'auto',
+                    fontSize: '1rem',
+                    textAlign: 'justify',
+                    width: '100%'
+                }}>
+                    {metadata.description}
+                </pre>
+                    </>
+                )}
+            </section>
+
+            {/* Gráfico y Features juntos */}
+            <section style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr 1fr',
+                gap: '2rem',
+                marginBottom: '3rem',
+                alignItems: 'flex-start'
             }}>
-              {metadata.description}
-            </pre>
-
-                            <div style={{marginTop: '1rem'}}>
-                                <h3>Características</h3>
-                                <ul>
-                                    {metadata.feature_names.map((name, i) => (<li key={i}>{name}</li>))}
-                                </ul>
-                                <p><strong>Instancias:</strong> {metadata.shape[0]}</p>
-                                <p><strong>Atributos:</strong> {metadata.shape[1]}</p>
-                            </div>
-                        </>)}
-                </section>
-
                 {/* Gráfico */}
-                <section>
+                <div>
                     <h2>Distribución de Clases</h2>
                     <ResponsiveContainer width="100%" height={300}>
                         <BarChart data={chartData}>
@@ -102,35 +110,61 @@ export default function DatasetView() {
                             <Bar dataKey="count" fill="#8884d8"/>
                         </BarChart>
                     </ResponsiveContainer>
-                </section>
-            </div>
+                    <p style={{textAlign: 'center'}}>Total : {metadata.shape[0]}</p>
+                </div>
 
-            {/* Tabla de datos abajo */}
+                {/* Target Name */}
+                <div>
+                    <h2>Classes</h2>
+                    <ul>
+                        {metadata?.target_names.map((name, i) => (
+                            <li key={i}>{name}</li>
+                        ))}
+                    </ul>
+                </div>
+
+                {/* Features */}
+                <div>
+                    <h2>Features</h2>
+                    <ul>
+                        {metadata?.feature_names.map((name, i) => (
+                            <li key={i}>{name}</li>
+                        ))}
+                    </ul>
+                </div>
+            </section>
+
+            {/* Tabla de datos */}
             <section>
                 <h2>Datos del Dataset</h2>
                 <div style={{
                     overflowX: 'auto', border: '1px solid #ccc', borderRadius: '8px'
                 }}>
                     <table style={{width: '100%', borderCollapse: 'collapse'}}>
-                        <thead style={{background: '#f0f0f0'}}>
+                        <thead style={{background: '#0000'}}>
                         <tr>
                             {fieldMap.map((col) => (
-                                <th key={col.key} style={{padding: '8px', border: '1px solid #ddd'}}>{col.label}</th>))}
+                                <th key={col.key} style={{padding: '8px', border: '1px solid #ddd'}}>{col.label}</th>
+                            ))}
                             <th style={{padding: '8px', border: '1px solid #ddd'}}>Species</th>
                         </tr>
                         </thead>
                         <tbody>
-                        {data.map((row, idx) => (<tr key={idx}>
+                        {data.map((row, idx) => (
+                            <tr key={idx}>
                                 {fieldMap.map((col) => (
                                     <td key={col.key} style={{padding: '8px', border: '1px solid #eee'}}>
                                         {row[col.key]}
-                                    </td>))}
+                                    </td>
+                                ))}
                                 <td style={{padding: '8px', border: '1px solid #eee'}}>{row.species}</td>
-                            </tr>))}
+                            </tr>
+                        ))}
                         </tbody>
                     </table>
                 </div>
             </section>
-        </div>)
+        </div>
+    )
 
 }

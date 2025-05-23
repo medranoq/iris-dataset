@@ -7,8 +7,6 @@ from .schema import IrisResponse
 from .services import get_data_set
 import numpy as np
 
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
@@ -49,6 +47,7 @@ async def iris_data_set():
         content={
             "data": get_data_set(),
             "metadata": {
+                "target_names": app.state.iris_data.target_names.tolist(),
                 "feature_names": app.state.iris_data.feature_names,
                 "description": app.state.iris_data.DESCR,
                 "file_name": app.state.iris_data.filename,
@@ -67,20 +66,31 @@ async def iris_data_set_by_target(target: int):
         content={
             "data": filtered_data,
             "metadata": {
-                "shape": app.state.iris_data.data.shape,
+                "size": len(filtered_data),
+                "target": target,
+                "target_name": app.state.iris_data.target_names[target],
             }
         }
     )
+
+@app.get("/target_names")
+async def iris_target_names():
+    return JSONResponse(
+        content={
+            "target_names": app.state.iris_data.target_names.tolist(),
+        }
+    )
+
 @app.post("/predict")
 async def predict(iris: IrisResponse):
 
     features = np.array([[iris.sepal_length, iris.sepal_width, iris.petal_length, iris.petal_width]])
 
-    target = app.state.model.predict(features).tolist()
+    target = app.state.model.predict(features).tolist()[0]
 
     return JSONResponse(
         content={
-            "prediction": app.state.iris_data.target_names[target[0]],
+            "prediction": app.state.iris_data.target_names[target],
         }
     )
 

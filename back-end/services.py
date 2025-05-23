@@ -2,8 +2,6 @@ from sklearn.datasets import load_iris
 
 def get_data_set():
     iris = load_iris()
-
-    print(iris.keys())
     data = iris.data.tolist()
     target = iris.target.tolist()
     target_names = iris.target_names.tolist()

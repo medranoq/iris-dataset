@@ -45,9 +45,10 @@ export default function PredictionForm() {
     }
 
     return (
-        <div style={{ maxWidth: '400px', margin: '2rem auto' }}>
-            <h1>Clasificador de Flores Iris</h1>
-            <form onSubmit={handleSubmit}>
+        <div style={{maxWidth: '400px', margin: '2rem auto'}}>
+            <h1>Iris Classification</h1>
+
+            <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column' }}>
                 <label>
                     Sepal Length:
                     <input
@@ -59,7 +60,7 @@ export default function PredictionForm() {
                         required
                     />
                 </label>
-                <br />
+                <br/>
                 <label>
                     Sepal Width:
                     <input
@@ -71,7 +72,7 @@ export default function PredictionForm() {
                         required
                     />
                 </label>
-                <br />
+                <br/>
                 <label>
                     Petal Length:
                     <input
@@ -83,7 +84,7 @@ export default function PredictionForm() {
                         required
                     />
                 </label>
-                <br />
+                <br/>
                 <label>
                     Petal Width:
                     <input
@@ -95,16 +96,15 @@ export default function PredictionForm() {
                         required
                     />
                 </label>
-                <br />
-                <button type="submit" disabled={loading} style={{ marginTop: '1rem' }}>
+                <br/>
+                <button type="submit" disabled={loading} style={{marginTop: '1rem'}}>
                     {loading ? 'Clasificando...' : 'Clasificar'}
                 </button>
             </form>
-
-            {error && <p style={{ color: 'red' }}>{error}</p>}
+            {error && <p style={{color: 'red'}}>{error}</p>}
 
             {result && (
-                <div style={{ marginTop: '2rem' }}>
+                <div style={{marginTop: '2rem'}}>
                     <h2>Predicción:</h2>
                     <div style={classStyles[result.toLowerCase()] || {}}>
                         <strong>{result}</strong>
