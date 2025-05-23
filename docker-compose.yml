@@ -1,10 +1,27 @@
 services:
   fastapi:
     build:
-      context: app
+      context: back-end
       dockerfile: Dockerfile
+
+    working_dir: /app
+
     ports:
       - "8000:8000"
     volumes:
       - .:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn back-end.main:app --host 0.0.0.0 --port 8000 --reload
+
+  react:
+    build:
+      context: frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/src:/app/src       # monta solo la carpeta src
+      - ./frontend/public:/app/public # monta solo la carpeta public
+      - /app/node_modules             # volumen anónimo para node_modules dentro del contenedor
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    command: npm run dev  -- --host 0.0.0.0
