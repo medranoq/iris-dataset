@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from .model import load_iris_model, load_iris_ds
 from .schema import IrisResponse
 from .services import get_data_set
@@ -36,9 +37,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.mount("/static", StaticFiles(directory="back-end/static"), name="static")
+
 @app.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"message": "Service is running!"}
 
 
 @app.get("/iris")
@@ -57,9 +60,16 @@ async def iris_data_set():
         }
     )
 
-@app.get("/iris/{target}")
+@app.get("/spices/{target}")
 async def iris_data_set_by_target(target: int):
     data = get_data_set()
+
+    if target < 0 or target >= len(app.state.iris_data.target_names):
+        return JSONResponse(
+            status_code=404,
+            content={"message": "Target not found"}
+        )
+
     filtered_data = [item for item in data if item["target"] == target]
 
     return JSONResponse(
@@ -73,13 +83,19 @@ async def iris_data_set_by_target(target: int):
         }
     )
 
-@app.get("/target_names")
+@app.get("/spices")
 async def iris_target_names():
-    return JSONResponse(
-        content={
-            "target_names": app.state.iris_data.target_names.tolist(),
+
+    target_names = app.state.iris_data.target_names.tolist()
+    spices = [
+        {
+            "target": idx,
+            "target_name": name.capitalize(),
+            "image_url": f"/static/{idx}.jpg"  #
         }
-    )
+        for idx, name in enumerate(target_names)
+    ]
+    return JSONResponse(content={"spices": spices})
 
 @app.post("/predict")
 async def predict(iris: IrisResponse):
