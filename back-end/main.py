@@ -6,16 +6,19 @@ from fastapi.staticfiles import StaticFiles
 from .model import load_iris_model, load_iris_ds
 from .schema import IrisResponse
 from .services import get_data_set
+
+from .api.v1.data_set_router import router as data_set_router
+from .api.v1.species_router import router as species_router
+from .api.v1.graph_router import router as graph_router
 import numpy as np
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
         # Load the model and dataset
-
         app.state.model = load_iris_model()
         app.state.iris_data = load_iris_ds()
-
         print("Resources loaded successfully.")
         yield
     finally:
@@ -39,6 +42,21 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory="back-end/static"), name="static")
 
+app.include_router(
+    data_set_router,
+    prefix="/api/v1"
+)
+app.include_router(
+    species_router,
+    prefix="/api/v1"
+)
+
+app.include_router(
+    graph_router,
+    prefix="/api/v1",
+)
+
+
 @app.get("/")
 async def root():
     return {"message": "Service is running!"}
@@ -48,7 +66,7 @@ async def root():
 async def iris_data_set():
     return JSONResponse(
         content={
-            "data": get_data_set(),
+            "data": get_data_set(app.state.iris_data),
             "metadata": {
                 "target_names": app.state.iris_data.target_names.tolist(),
                 "feature_names": app.state.iris_data.feature_names,
@@ -60,9 +78,10 @@ async def iris_data_set():
         }
     )
 
+
 @app.get("/spices/{target}")
 async def iris_data_set_by_target(target: int):
-    data = get_data_set()
+    data = get_data_set(app.state.iris_data)
 
     if target < 0 or target >= len(app.state.iris_data.target_names):
         return JSONResponse(
@@ -83,23 +102,23 @@ async def iris_data_set_by_target(target: int):
         }
     )
 
+
 @app.get("/spices")
 async def iris_target_names():
-
     target_names = app.state.iris_data.target_names.tolist()
     spices = [
         {
             "target": idx,
             "target_name": name.capitalize(),
-            "image_url": f"/static/{idx}.jpg"  #
+            "image_url": f"/static/{idx}.jpg"
         }
         for idx, name in enumerate(target_names)
     ]
     return JSONResponse(content={"spices": spices})
 
+
 @app.post("/predict")
 async def predict(iris: IrisResponse):
-
     features = np.array([[iris.sepal_length, iris.sepal_width, iris.petal_length, iris.petal_width]])
 
     target = app.state.model.predict(features).tolist()[0]
@@ -109,5 +128,3 @@ async def predict(iris: IrisResponse):
             "prediction": app.state.iris_data.target_names[target],
         }
     )
-
-
